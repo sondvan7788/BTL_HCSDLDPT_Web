@@ -3,7 +3,7 @@
 Web App Backend - Voice Retrieval System (Flask Server)
 ======================================================
 Cung cấp REST API cho hệ thống tìm kiếm giọng nói phụ nữ:
-- Tìm kiếm theo file upload hoặc ghi âm trực tiếp
+- Tìm kiếm theo file upload (Query-by-Example)
 - Tìm kiếm nhanh bằng file mẫu có sẵn trong kho
 - Stream file âm thanh WAV trực tiếp cho trình phát web
 - Thống kê phân tích CSDL PostgreSQL
@@ -16,31 +16,41 @@ from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-# Thiết lập đường dẫn tới thư mục gốc và thư mục DacTrung
+# Thiết lập đường dẫn nội bộ Web
 CURRENT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = CURRENT_DIR.parent
-DACTRUNG_DIR = PROJECT_ROOT / "DacTrung"
-AUDIO_DIR = PROJECT_ROOT / "ChuanHoa"
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
+
+# Nạp các module quản trị CSDL và Tìm kiếm từ các package nội bộ của Web
+from database.postgres_db_manager import PostgresDatabaseManager
+from services.search_engine import VoiceSearchEngine
+
+# Cấu hình thư mục lưu file tạm người dùng upload
 UPLOAD_DIR = CURRENT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-for p in [str(PROJECT_ROOT), str(DACTRUNG_DIR)]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
-from postgres_db_manager import PostgresDatabaseManager
-from search_engine import VoiceSearchEngine
+# Cấu hình thư mục chứa audio dataset (tự động nhận diện thư mục cục bộ hoặc ngoài thư mục gốc)
+AUDIO_DIR_CANDIDATES = [
+    CURRENT_DIR.parent / "ChuanHoa",
+    CURRENT_DIR / "audio_data",
+    CURRENT_DIR / "samples"
+]
+AUDIO_DIR = CURRENT_DIR / "audio_data"
+for candidate in AUDIO_DIR_CANDIDATES:
+    if candidate.exists() and any(candidate.glob("*.wav")):
+        AUDIO_DIR = candidate
+        break
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
 # Khởi tạo Database Manager và Search Engine
-print("="*60)
+print("=" * 60)
 print("Đang khởi động Voice Retrieval Web App Backend...")
 db_manager = PostgresDatabaseManager()
 search_engine = VoiceSearchEngine(db_manager=db_manager)
 print("-> Backend đã kết nối thành công tới PostgreSQL 18!")
-print("="*60)
+print("=" * 60)
 
 @app.route("/")
 def index():
@@ -102,23 +112,31 @@ def search_audio():
             f0_filter = (float(f0_min), float(f0_max))
 
         temp_audio_path = None
-        is_uploaded = False
 
-        # Trường hợp 1: Người dùng upload file mới hoặc gửi audio từ micro
+        # Trường hợp 1: Người dùng upload file mới
         if "file" in request.files and request.files["file"].filename != "":
             audio_file = request.files["file"]
             ext = Path(audio_file.filename).suffix or ".wav"
             unique_name = f"query_{uuid.uuid4().hex[:8]}{ext}"
             temp_audio_path = UPLOAD_DIR / unique_name
             audio_file.save(str(temp_audio_path))
-            is_uploaded = True
             query_audio_url = f"/api/audio/upload/{unique_name}"
 
         # Trường hợp 2: Người dùng chọn 1 file mẫu có sẵn trong kho
         elif "sample_name" in request.form and request.form["sample_name"]:
             sample_name = request.form["sample_name"].strip()
-            temp_audio_path = AUDIO_DIR / sample_name
-            if not temp_audio_path.exists():
+            # Tìm file mẫu trong các đường dẫn khả dĩ
+            candidates = [
+                AUDIO_DIR / sample_name,
+                CURRENT_DIR.parent / "ChuanHoa" / sample_name,
+                CURRENT_DIR / "samples" / sample_name
+            ]
+            for c in candidates:
+                if c.exists():
+                    temp_audio_path = c
+                    break
+            
+            if temp_audio_path is None or not temp_audio_path.exists():
                 return jsonify({"success": False, "error": f"Không tìm thấy file mẫu: {sample_name}"}), 404
             query_audio_url = f"/api/audio/{sample_name}"
         else:
@@ -141,8 +159,16 @@ def search_audio():
 
 @app.route("/api/audio/<filename>", methods=["GET"])
 def stream_dataset_audio(filename):
-    """Phát file âm thanh từ kho dữ liệu ChuanHoa/."""
-    return send_from_directory(str(AUDIO_DIR), filename, mimetype="audio/wav")
+    """Phát file âm thanh từ kho dữ liệu."""
+    candidates = [
+        AUDIO_DIR / filename,
+        CURRENT_DIR.parent / "ChuanHoa" / filename,
+        CURRENT_DIR / "samples" / filename
+    ]
+    for c in candidates:
+        if c.exists():
+            return send_from_directory(str(c.parent), c.name, mimetype="audio/wav")
+    return jsonify({"error": f"Không tìm thấy tệp audio '{filename}'"}), 404
 
 @app.route("/api/audio/upload/<filename>", methods=["GET"])
 def stream_upload_audio(filename):
