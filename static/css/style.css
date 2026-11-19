@@ -86,13 +86,3 @@ audio::-webkit-media-controls-current-time-display,
 audio::-webkit-media-controls-time-remaining-display {
     color: #cbd5e1;
 }
-
-/* Pulse recording indicator */
-@keyframes pulse-ring {
-    0% { transform: scale(0.95); opacity: 0.8; }
-    50% { transform: scale(1.15); opacity: 0.3; }
-    100% { transform: scale(0.95); opacity: 0.8; }
-}
-.recording-pulse {
-    animation: pulse-ring 1.5s infinite ease-in-out;
-}

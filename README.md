@@ -18,7 +18,6 @@
 
 1. **Tìm kiếm âm thanh tương đồng (Query-by-Example):**
    * Kéo thả hoặc duyệt tệp âm thanh đầu vào (`.wav`, `.mp3`, `.m4a`).
-   * Ghi âm giọng nói trực tiếp qua Microphone của máy tính.
    * Thử nghiệm nhanh 1-click bằng các tệp âm thanh mẫu có sẵn trong kho.
    * Lọc nâng cao: Giới hạn Top K (3, 5, 10), Lọc theo dải cao độ F0 (Hz).
    * Hiển thị bảng xếp hạng Top 5 kèm huy hiệu thứ hạng, điểm tương đồng Cosine, khoảng cách Euclid, so sánh độ lệch cao độ và lời giải thích tự nhiên.

@@ -2,9 +2,6 @@
 
 let selectedFile = null;
 let selectedSampleName = null;
-let isRecording = false;
-let mediaRecorder = null;
-let audioChunks = [];
 let comparisonChartInstance = null;
 let f0ChartInstance = null;
 let durationChartInstance = null;
@@ -85,48 +82,6 @@ function clearSelectedFile() {
     selectedFile = null;
     document.getElementById("audio-input-file").value = "";
     document.getElementById("selected-file-preview").classList.add("hidden");
-}
-
-// ====================================================================
-// MICROPHONE RECORDING (HTML5 MediaRecorder)
-// ====================================================================
-async function toggleRecording() {
-    const recordBtn = document.getElementById("btn-record");
-    const recordDot = document.getElementById("record-dot");
-    const recordText = document.getElementById("record-text");
-
-    if (!isRecording) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-                const audioFile = new File([audioBlob], `recorded_${Date.now()}.wav`, { type: "audio/wav" });
-                handleSelectedFile(audioFile);
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start();
-            isRecording = true;
-            recordDot.classList.add("recording-pulse", "bg-red-500");
-            recordText.textContent = "Đang ghi âm... (Bấm để dừng)";
-            recordBtn.classList.add("border-rose-500", "bg-rose-950/40");
-        } catch (err) {
-            alert("Không thể truy cập Microphone: " + err.message);
-        }
-    } else {
-        mediaRecorder.stop();
-        isRecording = false;
-        recordDot.classList.remove("recording-pulse", "bg-red-500");
-        recordText.textContent = "Bật Microphone";
-        recordBtn.classList.remove("border-rose-500", "bg-rose-950/40");
-    }
 }
 
 // ====================================================================
