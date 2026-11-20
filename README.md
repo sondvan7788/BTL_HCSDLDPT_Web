@@ -69,14 +69,32 @@ python database/setup_postgres_database.py
 
 *(Cách thủ công: Bạn cũng có thể mở pgAdmin 4 -> tạo database `voice_multimedia_db` -> mở Query Tool -> mở file `database/voice_multimedia_db_backup.sql` và nhấn Run).*
 
-### Bước 4: Khởi động Web Server
+### Bước 4: Cấu hình thư mục 1,000 file âm thanh (Nếu lưu ở đường dẫn khác)
+Mặc định hệ thống tự động tìm thư mục `audio_data/` hoặc `../ChuanHoa/`. Nếu 1,000 file âm thanh `.wav` trên máy mới của bạn nằm ở một ổ đĩa hoặc đường dẫn bất kỳ khác (ví dụ `D:/Data/Audio_1000/`), bạn có thể chỉ định theo 1 trong các cách cực kỳ tiện lợi:
+* **Cách 1 (Truyền cờ trực tiếp khi chạy):**
+  ```bash
+  python app.py --audio-dir "D:/Data/Audio_1000"
+  ```
+* **Cách 2 (Dùng file cấu hình `config.json`):**
+  Sao chép file `config.example.json` thành `config.json` và điền đường dẫn thư mục:
+  ```json
+  {
+    "audio_dir": "D:/Data/Audio_1000"
+  }
+  ```
+* **Cách 3 (Biến môi trường):**
+  ```bash
+  set AUDIO_DIR=D:/Data/Audio_1000
+  ```
+
+### Bước 5: Khởi động Web Server
 Chạy lệnh:
 ```bash
 python app.py
 ```
 *(Hoặc trên Windows chỉ cần nhấp đúp vào file `start.bat`).*
 
-### Bước 5: Trải nghiệm
+### Bước 6: Trải nghiệm
 Mở trình duyệt Web tại: **`http://localhost:5000`**
 
 ---

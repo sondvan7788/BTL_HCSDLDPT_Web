@@ -6,18 +6,31 @@ Lớp Quản trị CSDL PostgreSQL (Data Access Object - DAO)
 Cung cấp các API truy vấn, trích xuất dữ liệu và tìm kiếm tương đồng Top-K thuần SQL
 trực tiếp trong PostgreSQL Database Engine.
 """
+import os
+import json
+from pathlib import Path
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import numpy as np
 
 class PostgresDatabaseManager:
-    def __init__(self, host="localhost", port=5432, user="postgres", password="123456", dbname="voice_multimedia_db"):
+    def __init__(self, host=None, port=None, user=None, password=None, dbname=None):
+        # Đọc cấu hình từ config.json nếu có
+        cfg = {}
+        config_path = Path(__file__).resolve().parent.parent / "config.json"
+        if config_path.exists():
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+            except Exception:
+                pass
+
         self.conn_params = {
-            "host": host,
-            "port": port,
-            "user": user,
-            "password": password,
-            "dbname": dbname
+            "host": host or cfg.get("pg_host") or os.environ.get("PGHOST", "localhost"),
+            "port": int(port or cfg.get("pg_port") or os.environ.get("PGPORT", 5432)),
+            "user": user or cfg.get("pg_user") or os.environ.get("PGUSER", "postgres"),
+            "password": password or cfg.get("pg_password") or os.environ.get("PGPASSWORD", "123456"),
+            "dbname": dbname or cfg.get("pg_database") or os.environ.get("PGDATABASE", "voice_multimedia_db")
         }
 
     def get_connection(self):

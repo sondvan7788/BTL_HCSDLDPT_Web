@@ -12,6 +12,8 @@ import os
 import sys
 import time
 import uuid
+import json
+import argparse
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -29,17 +31,51 @@ from services.search_engine import VoiceSearchEngine
 UPLOAD_DIR = CURRENT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Cấu hình thư mục chứa audio dataset (tự động nhận diện thư mục cục bộ hoặc ngoài thư mục gốc)
+# ==============================================================================
+# CẤU HÌNH ĐƯỜNG DẪN 1,000 FILE ÂM THANH (LINH HOẠT TRÊN MỌI MÁY TÍNH)
+# Thứ tự ưu tiên:
+# 1. Tham số dòng lệnh: python app.py --audio-dir "D:/path/to/audio"
+# 2. Biến môi trường: AUDIO_DIR
+# 3. File cấu hình: config.json {"audio_dir": "..."}
+# 4. Các thư mục mặc định: audio_data/, ../ChuanHoa/, samples/
+# ==============================================================================
+CONFIG_FILE = CURRENT_DIR / "config.json"
+custom_audio_dir = None
+
+# Đọc từ config.json nếu có
+if CONFIG_FILE.exists():
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            if "audio_dir" in cfg and cfg["audio_dir"]:
+                custom_audio_dir = Path(cfg["audio_dir"])
+    except Exception:
+        pass
+
+# Đọc từ biến môi trường
+if not custom_audio_dir and os.environ.get("AUDIO_DIR"):
+    custom_audio_dir = Path(os.environ["AUDIO_DIR"])
+
+# Đọc từ tham số dòng lệnh CLI
+for idx, arg in enumerate(sys.argv):
+    if arg in ("--audio-dir", "-a") and idx + 1 < len(sys.argv):
+        custom_audio_dir = Path(sys.argv[idx + 1])
+        break
+
 AUDIO_DIR_CANDIDATES = [
-    CURRENT_DIR.parent / "ChuanHoa",
+    custom_audio_dir,
     CURRENT_DIR / "audio_data",
+    CURRENT_DIR.parent / "ChuanHoa",
     CURRENT_DIR / "samples"
 ]
+
 AUDIO_DIR = CURRENT_DIR / "audio_data"
 for candidate in AUDIO_DIR_CANDIDATES:
-    if candidate.exists() and any(candidate.glob("*.wav")):
+    if candidate and candidate.exists() and any(candidate.glob("*.wav")):
         AUDIO_DIR = candidate
         break
+
+print(f"[*] Thư mục kho dữ liệu âm thanh đang sử dụng: {AUDIO_DIR}")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
