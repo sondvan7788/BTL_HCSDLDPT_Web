@@ -1,7 +1,6 @@
 // app.js - Frontend Logic for Voice Retrieval Web Application
 
 let selectedFile = null;
-let selectedSampleName = null;
 let comparisonChartInstance = null;
 let f0ChartInstance = null;
 let durationChartInstance = null;
@@ -9,7 +8,6 @@ let currentDbPage = 1;
 
 document.addEventListener("DOMContentLoaded", () => {
     initDropZone();
-    loadQuickSamples();
     loadDatabaseStats();
     loadDatabasePage(1);
 });
@@ -70,12 +68,8 @@ function initDropZone() {
 
 function handleSelectedFile(file) {
     selectedFile = file;
-    selectedSampleName = null;
     document.getElementById("selected-file-name").textContent = file.name;
     document.getElementById("selected-file-preview").classList.remove("hidden");
-    
-    // Bỏ active của các nút sample nếu có
-    document.querySelectorAll(".sample-pill").forEach(el => el.classList.remove("border-indigo-500", "bg-indigo-950/60"));
 }
 
 function clearSelectedFile() {
@@ -85,52 +79,11 @@ function clearSelectedFile() {
 }
 
 // ====================================================================
-// QUICK SAMPLES
-// ====================================================================
-async function loadQuickSamples() {
-    try {
-        const res = await fetch("/api/samples");
-        const data = await res.json();
-        const container = document.getElementById("quick-samples-list");
-        container.innerHTML = "";
-
-        if (data.success && data.samples.length > 0) {
-            data.samples.forEach(s => {
-                const btn = document.createElement("button");
-                btn.className = "sample-pill p-2 rounded-lg bg-slate-900/60 hover:bg-indigo-950/40 border border-slate-800 text-left transition-all text-xs flex flex-col space-y-0.5 truncate";
-                btn.onclick = () => selectSampleFile(s.file_name, btn);
-                btn.innerHTML = `
-                    <span class="font-bold text-slate-200 truncate w-full">${s.file_name}</span>
-                    <span class="text-[10px] text-slate-400 font-mono">${s.duration_s}s • F0: ${s.pitch_f0_mean}Hz</span>
-                `;
-                container.appendChild(btn);
-            });
-        }
-    } catch (err) {
-        console.error("Lỗi tải sample files:", err);
-    }
-}
-
-function selectSampleFile(fileName, btnElement) {
-    clearSelectedFile();
-    selectedSampleName = fileName;
-
-    // Highlight button
-    document.querySelectorAll(".sample-pill").forEach(el => el.classList.remove("border-indigo-500", "bg-indigo-950/60"));
-    if (btnElement) {
-        btnElement.classList.add("border-indigo-500", "bg-indigo-950/60");
-    }
-
-    // Tự động kích hoạt tìm kiếm luôn
-    executeSearch();
-}
-
-// ====================================================================
 // EXECUTE SEARCH (API CALL)
 // ====================================================================
 async function executeSearch() {
-    if (!selectedFile && !selectedSampleName) {
-        alert("Vui lòng tải lên một file âm thanh hoặc bấm chọn một file mẫu!");
+    if (!selectedFile) {
+        alert("Vui lòng kéo thả hoặc tải lên một file âm thanh để tìm kiếm!");
         return;
     }
 
@@ -145,11 +98,7 @@ async function executeSearch() {
     submitBtn.disabled = true;
 
     const formData = new FormData();
-    if (selectedFile) {
-        formData.append("file", selectedFile);
-    } else if (selectedSampleName) {
-        formData.append("sample_name", selectedSampleName);
-    }
+    formData.append("file", selectedFile);
 
     const topK = document.getElementById("param-top-k").value;
     formData.append("top_k", topK);

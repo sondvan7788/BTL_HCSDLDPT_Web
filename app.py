@@ -102,42 +102,11 @@ def get_stats():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/api/samples", methods=["GET"])
-def get_samples():
-    """Lấy danh sách 12 file mẫu từ kho dữ liệu để người dùng thử nghiệm nhanh."""
-    try:
-        with db_manager.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                SELECT a.file_id, a.file_name, a.duration_s, f.pitch_f0_mean, f.spectral_centroid_mean
-                FROM audio_files a
-                JOIN acoustic_features_29d f ON a.file_id = f.file_id
-                ORDER BY a.file_id ASC
-                LIMIT 12;
-                """)
-                rows = cur.fetchall()
-        
-        samples = []
-        for r in rows:
-            samples.append({
-                "file_id": r["file_id"],
-                "file_name": r["file_name"],
-                "duration_s": round(r["duration_s"], 2),
-                "pitch_f0_mean": round(r["pitch_f0_mean"], 1),
-                "spectral_centroid_mean": round(r["spectral_centroid_mean"], 1),
-                "audio_url": f"/api/audio/{r['file_name']}"
-            })
-        return jsonify({"success": True, "samples": samples})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
 @app.route("/api/search", methods=["POST"])
 def search_audio():
     """
     API tìm kiếm giọng nói tương đồng (Query-by-Example).
-    Chấp nhận:
-    1. Upload file âm thanh (multipart/form-data: file)
-    2. Hoặc chọn 1 file mẫu có sẵn (JSON / Form-data: sample_name)
+    Đầu vào: File âm thanh tải lên từ người dùng (multipart/form-data: file)
     """
     try:
         top_k = int(request.form.get("top_k", 5))
@@ -147,36 +116,15 @@ def search_audio():
         if f0_min and f0_max:
             f0_filter = (float(f0_min), float(f0_max))
 
-        temp_audio_path = None
+        if "file" not in request.files or request.files["file"].filename == "":
+            return jsonify({"success": False, "error": "Vui lòng tải lên một tệp âm thanh hợp lệ (.wav, .mp3)!"}), 400
 
-        # Trường hợp 1: Người dùng upload file mới
-        if "file" in request.files and request.files["file"].filename != "":
-            audio_file = request.files["file"]
-            ext = Path(audio_file.filename).suffix or ".wav"
-            unique_name = f"query_{uuid.uuid4().hex[:8]}{ext}"
-            temp_audio_path = UPLOAD_DIR / unique_name
-            audio_file.save(str(temp_audio_path))
-            query_audio_url = f"/api/audio/upload/{unique_name}"
-
-        # Trường hợp 2: Người dùng chọn 1 file mẫu có sẵn trong kho
-        elif "sample_name" in request.form and request.form["sample_name"]:
-            sample_name = request.form["sample_name"].strip()
-            # Tìm file mẫu trong các đường dẫn khả dĩ
-            candidates = [
-                AUDIO_DIR / sample_name,
-                CURRENT_DIR.parent / "ChuanHoa" / sample_name,
-                CURRENT_DIR / "samples" / sample_name
-            ]
-            for c in candidates:
-                if c.exists():
-                    temp_audio_path = c
-                    break
-            
-            if temp_audio_path is None or not temp_audio_path.exists():
-                return jsonify({"success": False, "error": f"Không tìm thấy file mẫu: {sample_name}"}), 404
-            query_audio_url = f"/api/audio/{sample_name}"
-        else:
-            return jsonify({"success": False, "error": "Vui lòng tải lên file âm thanh hoặc chọn file mẫu!"}), 400
+        audio_file = request.files["file"]
+        ext = Path(audio_file.filename).suffix or ".wav"
+        unique_name = f"query_{uuid.uuid4().hex[:8]}{ext}"
+        temp_audio_path = UPLOAD_DIR / unique_name
+        audio_file.save(str(temp_audio_path))
+        query_audio_url = f"/api/audio/upload/{unique_name}"
 
         # Thực thi tìm kiếm bằng VoiceSearchEngine
         search_result = search_engine.search(temp_audio_path, top_k=top_k, f0_filter=f0_filter)
