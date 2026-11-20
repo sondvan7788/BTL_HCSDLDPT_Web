@@ -350,8 +350,25 @@ async function loadDatabaseStats() {
         const data = await res.json();
         if (data.success) {
             const s = data.data;
+            const countStr = s.num_files.toLocaleString();
+
+            const totalEl = document.getElementById("analytics-total-files");
+            if (totalEl) totalEl.textContent = countStr;
+
+            const badgeEl = document.getElementById("top-db-badge");
+            if (badgeEl) badgeEl.textContent = `${s.engine} Active (${countStr} files)`;
+
+            const tabCountEl = document.getElementById("tab-explorer-count");
+            if (tabCountEl) tabCountEl.textContent = countStr;
+
             document.getElementById("analytics-avg-dur").textContent = `${s.duration.avg} s`;
+            const durRangeEl = document.getElementById("analytics-dur-range");
+            if (durRangeEl) durRangeEl.textContent = `Dải: ${s.duration.min}s - ${s.duration.max}s`;
+
             document.getElementById("analytics-avg-f0").textContent = `${s.pitch_f0.avg} Hz`;
+            const f0RangeEl = document.getElementById("analytics-f0-range");
+            if (f0RangeEl) f0RangeEl.textContent = `Dải: ${s.pitch_f0.min} - ${s.pitch_f0.max} Hz`;
+
             document.getElementById("analytics-db-size").textContent = s.database_size;
         }
     } catch (err) {
