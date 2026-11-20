@@ -8,20 +8,31 @@ hoặc khởi tạo mới hoàn toàn trên máy mới.
 """
 import os
 import sys
+import json
 import subprocess
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pathlib import Path
 
-# Cấu hình kết nối PostgreSQL
-PG_HOST = "localhost"
-PG_PORT = 5432
-PG_USER = "postgres"
-PG_PASS = "123456"
-DB_NAME = "voice_multimedia_db"
-
 CURRENT_DIR = Path(__file__).resolve().parent
+WEB_ROOT = CURRENT_DIR.parent
+CONFIG_FILE = WEB_ROOT / "config.json"
 BACKUP_SQL_PATH = CURRENT_DIR / "voice_multimedia_db_backup.sql"
+
+# Đọc cấu hình từ config.json nếu có
+cfg = {}
+if CONFIG_FILE.exists():
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        pass
+
+PG_HOST = cfg.get("pg_host") or os.environ.get("PGHOST", "localhost")
+PG_PORT = int(cfg.get("pg_port") or os.environ.get("PGPORT", 5432))
+PG_USER = cfg.get("pg_user") or os.environ.get("PGUSER", "postgres")
+PG_PASS = cfg.get("pg_password") or os.environ.get("PGPASSWORD", "123456")
+DB_NAME = cfg.get("pg_database") or os.environ.get("PGDATABASE", "voice_multimedia_db")
 
 def create_database_if_not_exists():
     """Tạo database mới nếu chưa tồn tại trên PostgreSQL server."""

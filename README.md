@@ -60,39 +60,34 @@ Mở Terminal tại thư mục `Web/` và chạy:
 pip install -r requirements.txt
 ```
 
-### Bước 3: Phục hồi Cơ sở dữ liệu PostgreSQL (Chỉ làm 1 lần)
+### Bước 3: Cấu hình thông số hệ thống (`config.json`)
+Trong thư mục `Web/` đã có sẵn file `config.json`. Mở file này để chỉnh sửa đường dẫn và thông tin CSDL theo máy của bạn:
+```json
+{
+  "audio_dir": "D:/path/to/your/1000_audio_files",
+  "pg_host": "localhost",
+  "pg_port": 5432,
+  "pg_user": "postgres",
+  "pg_password": "your_postgres_password",
+  "pg_database": "voice_multimedia_db"
+}
+```
+* **`audio_dir`**: Đường dẫn tới thư mục chứa 1,000 file âm thanh `.wav` trên máy tính đó.
+* **`pg_password`**: Mật khẩu tài khoản PostgreSQL trên máy tính đó (mặc định: `123456`).
+
+### Bước 4: Phục hồi Cơ sở dữ liệu PostgreSQL (Chỉ làm 1 lần)
 Chạy script phục hồi tự động có sẵn trong thư mục `database/`:
 ```bash
 python database/setup_postgres_database.py
 ```
-*Script sẽ tự động tạo database `voice_multimedia_db`, nạp toàn bộ 1,000 files, các bảng đặc trưng 29D, vector 192D và hàm Cosine Similarity.*
-
-*(Cách thủ công: Bạn cũng có thể mở pgAdmin 4 -> tạo database `voice_multimedia_db` -> mở Query Tool -> mở file `database/voice_multimedia_db_backup.sql` và nhấn Run).*
-
-### Bước 4: Cấu hình thư mục 1,000 file âm thanh (Nếu lưu ở đường dẫn khác)
-Mặc định hệ thống tự động tìm thư mục `audio_data/` hoặc `../ChuanHoa/`. Nếu 1,000 file âm thanh `.wav` trên máy mới của bạn nằm ở một ổ đĩa hoặc đường dẫn bất kỳ khác (ví dụ `D:/Data/Audio_1000/`), bạn có thể chỉ định theo 1 trong các cách cực kỳ tiện lợi:
-* **Cách 1 (Truyền cờ trực tiếp khi chạy):**
-  ```bash
-  python app.py --audio-dir "D:/Data/Audio_1000"
-  ```
-* **Cách 2 (Dùng file cấu hình `config.json`):**
-  Sao chép file `config.example.json` thành `config.json` và điền đường dẫn thư mục:
-  ```json
-  {
-    "audio_dir": "D:/Data/Audio_1000"
-  }
-  ```
-* **Cách 3 (Biến môi trường):**
-  ```bash
-  set AUDIO_DIR=D:/Data/Audio_1000
-  ```
+*(Script sẽ tự động đọc cấu hình tài khoản từ `config.json`, tạo database `voice_multimedia_db` và nạp toàn bộ 1,000 files, các bảng đặc trưng 29D, vector 192D cùng hàm Cosine Similarity).*
 
 ### Bước 5: Khởi động Web Server
 Chạy lệnh:
 ```bash
 python app.py
 ```
-*(Hoặc trên Windows chỉ cần nhấp đúp vào file `start.bat`).*
+*(Hoặc trên Windows chỉ cần nhấp đúp vào file `start.bat`). Hệ thống sẽ tự động nạp đường dẫn âm thanh và kết nối CSDL từ `config.json`.*
 
 ### Bước 6: Trải nghiệm
 Mở trình duyệt Web tại: **`http://localhost:5000`**
